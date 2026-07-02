@@ -27,12 +27,18 @@ class AppTheme {
   static ThemeData dark() => _base(Brightness.dark);
 
   static ThemeData _base(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
     final scheme = ColorScheme.fromSeed(
       seedColor: AppColors.navy,
       brightness: brightness,
-      primary: AppColors.navy,
-      secondary: AppColors.teal,
-      tertiary: AppColors.gold,
+      // Pin the exact brand colors in LIGHT mode. In DARK mode we intentionally
+      // leave these null so the scheme derives lighter, legible tones from the
+      // same navy seed: a dark-navy primary on a dark surface is nearly
+      // invisible, which made text buttons ("Add", "Cancel"), filled buttons
+      // and focused field labels ("What happened today?") disappear.
+      primary: isDark ? null : AppColors.navy,
+      secondary: isDark ? null : AppColors.teal,
+      tertiary: isDark ? null : AppColors.gold,
     );
 
     return ThemeData(

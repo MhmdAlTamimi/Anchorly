@@ -32,6 +32,10 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   final _editorFocus = FocusNode();
   QuillController? _quill;
   bool _loading = true;
+  // The formatting bar is collapsible so the writing surface stays calm and
+  // uncramped. Formatting while typing would be impossible if we auto-hid it on
+  // keyboard open, so instead we give a toggle in the app bar.
+  bool _showToolbar = true;
 
   @override
   void initState() {
@@ -90,6 +94,15 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Note'),
+        actions: [
+          IconButton(
+            tooltip: _showToolbar ? 'Hide formatting' : 'Show formatting',
+            icon: Icon(_showToolbar
+                ? Icons.keyboard_hide_rounded
+                : Icons.text_format_rounded),
+            onPressed: () => setState(() => _showToolbar = !_showToolbar),
+          ),
+        ],
       ),
       body: _loading || quill == null
           ? const Center(child: CircularProgressIndicator())
@@ -125,18 +138,50 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                     ),
                   ),
                 ),
-                // Formatting bar. Colors are disabled per the spec; bold,
-                // italic, font-size and checklist remain available.
-                SafeArea(
-                  top: false,
-                  child: QuillSimpleToolbar(
-                    controller: quill,
-                    config: const QuillSimpleToolbarConfig(
-                      showColorButton: false,
-                      showBackgroundColorButton: false,
+                // Reduced formatting bar: bold, font size, undo/redo,
+                // indentation and quote block only — everything else is hidden
+                // to keep it calm and uncluttered. Toggle it from the app bar.
+                if (_showToolbar)
+                  SafeArea(
+                    top: false,
+                    child: QuillSimpleToolbar(
+                      controller: quill,
+                      config: const QuillSimpleToolbarConfig(
+                        // Shown:
+                        showBoldButton: true,
+                        showFontSize: true,
+                        showUndo: true,
+                        showRedo: true,
+                        showIndent: true,
+                        showQuote: true,
+                        // Hidden:
+                        showItalicButton: false,
+                        showUnderLineButton: false,
+                        showStrikeThrough: false,
+                        showInlineCode: false,
+                        showCodeBlock: false,
+                        showListNumbers: false,
+                        showListBullets: false,
+                        showListCheck: false,
+                        showHeaderStyle: false,
+                        showAlignmentButtons: false,
+                        showColorButton: false,
+                        showBackgroundColorButton: false,
+                        showLink: false,
+                        showSearchButton: false,
+                        showSubscript: false,
+                        showSuperscript: false,
+                        showClearFormat: false,
+                        showFontFamily: false,
+                        showSmallButton: false,
+                        showDividers: false,
+                        showClipboardCopy: false,
+                        showClipboardCut: false,
+                        showClipboardPaste: false,
+                        showDirection: false,
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
     );
