@@ -75,6 +75,22 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      # Work around a bug in the transitive dep quill_native_bridge_windows
+      # 0.0.2 (pulled by flutter_quill): its Dart is compiled even for Android
+      # and references the bare `GMEM_MOVEABLE`, which newer `win32` moved into
+      # the GLOBAL_ALLOC_FLAGS enum. This applies the maintainers' confirmed
+      # one-line fix to the cached file. Guarded so it only runs when needed.
+      # See: https://github.com/singerdmx/flutter-quill/issues/2612
+      - name: Patch quill_native_bridge_windows (GMEM_MOVEABLE)
+        run: |
+          f="$(find "${PUB_CACHE:-$HOME/.pub-cache}" -path '*quill_native_bridge_windows*/lib/quill_native_bridge_windows.dart' 2>/dev/null | head -1)"
+          if [ -n "$f" ] && grep -q 'GlobalAlloc(GMEM_MOVEABLE' "$f"; then
+            sed -i 's/GlobalAlloc(GMEM_MOVEABLE,/GlobalAlloc(GLOBAL_ALLOC_FLAGS.GMEM_MOVEABLE,/g' "$f"
+            echo "Patched $f"
+          else
+            echo "No patch needed (file: ${f:-not found})"
+          fi
+
       # Generate drift database code (and any other *.g.dart).
       - name: Run code generation
         run: dart run build_runner build --delete-conflicting-outputs
