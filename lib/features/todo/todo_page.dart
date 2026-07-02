@@ -189,8 +189,8 @@ class _TodoTile extends StatelessWidget {
           onChanged: (v) => onToggle(v ?? false),
         ),
         title: Text(
-          item.text,
-          textDirection: directionOf(item.text),
+          item.content,
+          textDirection: directionOf(item.content),
           style: item.isDone
               ? TextStyle(
                   decoration: TextDecoration.lineThrough,

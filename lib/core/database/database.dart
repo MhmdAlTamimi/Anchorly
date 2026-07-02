@@ -36,7 +36,9 @@ enum DayState { neutral, success, relapse }
 
 class TodoItems extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get text => text()();
+  // Named `content` (not `text`): a getter called `text` would clash with
+  // drift's inherited Table.text() column builder.
+  TextColumn get content => text()();
   BoolColumn get isDone => boolean().withDefault(const Constant(false))();
   // Null until the item is checked off; set to the moment it was completed.
   DateTimeColumn get completedAt => dateTime().nullable()();
@@ -138,7 +140,7 @@ class TodoDao extends DatabaseAccessor<AppDatabase> with _$TodoDaoMixin {
 
   Future<void> addItem(String text) {
     return into(todoItems).insert(
-      TodoItemsCompanion.insert(text: text),
+      TodoItemsCompanion.insert(content: text),
     );
   }
 

@@ -33,7 +33,9 @@ dependencies:
 
   # Rich-text editor for Notes. Stores content as a structured "delta" (JSON),
   # not plain text — that is why Note.contentJson is a String of JSON.
-  flutter_quill: ^10.8.5
+  # Pinned to 11.4.2: works with Flutter 3.27 (Dart 3.6) and uses the fixed
+  # federated quill_native_bridge ^11 (older 10.x pulled a broken windows impl).
+  flutter_quill: 11.4.2
 
   # Monthly calendar widget used by the Journal habit tracker.
   table_calendar: ^3.1.2

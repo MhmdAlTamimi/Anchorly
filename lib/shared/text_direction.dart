@@ -5,7 +5,9 @@
 // what lets Arabic and English coexist without one looking "broken".
 
 import 'package:flutter/widgets.dart';
-import 'package:intl/intl.dart';
+// Import ONLY Bidi from intl — intl also exports its own `TextDirection`
+// class, which would collide with Flutter's dart:ui TextDirection.
+import 'package:intl/intl.dart' show Bidi;
 
 /// Returns the natural direction for [text].
 ///

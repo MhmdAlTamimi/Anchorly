@@ -118,7 +118,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                   child: QuillEditor.basic(
                     controller: quill,
                     focusNode: _editorFocus,
-                    configurations: const QuillEditorConfigurations(
+                    config: const QuillEditorConfig(
                       padding: EdgeInsets.all(Spacing.md),
                       placeholder: 'Write…',
                       autoFocus: false,
@@ -131,7 +131,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                   top: false,
                   child: QuillSimpleToolbar(
                     controller: quill,
-                    configurations: const QuillSimpleToolbarConfigurations(
+                    config: const QuillSimpleToolbarConfig(
                       showColorButton: false,
                       showBackgroundColorButton: false,
                     ),
