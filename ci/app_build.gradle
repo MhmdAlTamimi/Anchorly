@@ -1,0 +1,77 @@
+// Signing-aware app/build.gradle for Anchorly.
+//
+// This file is copied over the one that `flutter create` generates in CI (see
+// .github/workflows/build.yml). Keeping it in the repo lets us control the
+// three data-preservation levers without committing the whole android/ folder:
+//
+//   1. applicationId  — FIXED to com.anchorly.app forever. Android identifies
+//      the app by this string; changing it makes an update install as a NEW
+//      app and orphan the user's data.
+//   2. versionCode    — comes from `flutter.versionCode`, which CI sets from the
+//      GitHub run number (--build-number). It only ever increases, which is
+//      what lets Android install v2 over v1.
+//   3. signing key    — a STABLE release key from key.properties (written by CI
+//      from GitHub Secrets). If the key changes between builds Android refuses
+//      the update and forces a data-wiping reinstall. If no key is configured,
+//      we fall back to the debug key so CI still produces an installable APK.
+
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+// Release signing is configured only when CI has written key.properties.
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("key.properties")
+def hasSigning = keystorePropertiesFile.exists()
+if (hasSigning) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    namespace "com.anchorly.anchorly"
+    compileSdk flutter.compileSdkVersion
+    ndkVersion flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    defaultConfig {
+        // Do NOT change this. See the note at the top of the file.
+        applicationId "com.anchorly.app"
+        minSdk flutter.minSdkVersion
+        targetSdk flutter.targetSdkVersion
+        versionCode flutter.versionCode
+        versionName flutter.versionName
+    }
+
+    signingConfigs {
+        release {
+            if (hasSigning) {
+                keyAlias keystoreProperties["keyAlias"]
+                keyPassword keystoreProperties["keyPassword"]
+                storeFile file(keystoreProperties["storeFile"])
+                storePassword keystoreProperties["storePassword"]
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            // Use the stable release key when available; otherwise debug-sign so
+            // the APK is still installable for testing.
+            signingConfig hasSigning ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source "../.."
+}

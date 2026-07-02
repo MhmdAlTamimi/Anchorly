@@ -1,0 +1,11 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    # Generated database code is produced by build_runner in CI; don't lint it.
+    - "**/*.g.dart"
+
+linter:
+  rules:
+    prefer_const_constructors: true
+    prefer_final_locals: true

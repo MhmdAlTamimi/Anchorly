@@ -1,0 +1,98 @@
+name: Build APK
+
+# Build a release APK on every push to main and make it downloadable as an
+# artifact. Also runnable manually from the Actions tab.
+on:
+  push:
+    # Builds on main (the real releases) and on claude/* feature branches so
+    # changes can be verified via CI before merging.
+    branches: [main, "claude/**"]
+  workflow_dispatch:
+
+# versionCode must always increase for Android to allow install-over-update.
+# We derive it from the GitHub run number, which monotonically increases.
+env:
+  FLUTTER_VERSION: "3.27.4"
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Show Flutter version
+        run: flutter --version
+
+      # Generate the Android platform scaffold (incl. the binary Gradle wrapper).
+      # We keep this OUT of git and regenerate it here so builds are reproducible.
+      - name: Generate Android project
+        run: flutter create --platforms=android --org com.anchorly .
+
+      # Swap in our signing-aware build.gradle and set the app's display name.
+      - name: Apply custom Android config
+        run: |
+          cp ci/app_build.gradle android/app/build.gradle
+          sed -i 's/android:label="anchorly"/android:label="Anchorly"/' \
+            android/app/src/main/AndroidManifest.xml
+
+      # Write release signing config only if the keystore secret is present.
+      # Without it, the release build falls back to debug signing (installable,
+      # but updates won't be seamless — see README).
+      - name: Configure signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$PWD/android/app/keystore.jks"
+            cat > "$PWD/android/key.properties" <<EOF
+          storeFile=$PWD/android/app/keystore.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+            echo "Release signing configured."
+          else
+            echo "No KEYSTORE_BASE64 secret found — building a debug-signed release APK."
+          fi
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      # Generate drift database code (and any other *.g.dart).
+      - name: Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      # --build-number sets the Android versionCode from the run number so it
+      # always increases across builds.
+      - name: Build release APK
+        run: flutter build apk --release --build-number=${{ github.run_number }}
+
+      - name: Rename APK
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk \
+             "dist/anchorly-v1.0.0-build${{ github.run_number }}.apk"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: anchorly-apk
+          path: dist/*.apk
+          if-no-files-found: error

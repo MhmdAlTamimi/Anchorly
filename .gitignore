@@ -1,0 +1,25 @@
+# Dart / Flutter
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# Generated code (drift/quill) — produced by build_runner in CI, not committed.
+*.g.dart
+
+# Android platform scaffold — generated fresh in CI by `flutter create`.
+# We keep our own signing-aware build.gradle under ci/ and swap it in.
+/android/
+
+# Signing secrets — NEVER commit these.
+key.properties
+*.jks
+*.keystore
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
