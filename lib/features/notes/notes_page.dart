@@ -26,16 +26,13 @@ class NotesPage extends StatelessWidget {
 
   Future<void> _createAndOpen(BuildContext context) async {
     final id = await _dao.createEmpty();
-    if (context.mounted) {
-      await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => NoteEditorPage(noteId: id)),
-      );
-    }
-    // If the note was left completely empty, tidy it up so the list stays clean.
-    final note = await _dao.getById(id);
-    if (_plainText(note.contentJson).isEmpty && note.title.trim().isEmpty) {
-      await _dao.deleteNote(id);
-    }
+    if (!context.mounted) return;
+    // The editor saves live and cleans up an empty note itself on exit, so
+    // there is no post-pop bookkeeping to do here (doing it here used to race
+    // the editor's save and could delete a note that had just been written).
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => NoteEditorPage(noteId: id)),
+    );
   }
 
   @override
