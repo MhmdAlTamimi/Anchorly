@@ -60,7 +60,15 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 --decode > "$PWD/android/app/keystore.jks"
+            # Strip any whitespace/newlines/CR the pasted secret may carry —
+            # GNU base64 -d errors ("invalid input") on characters like \r.
+            printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > "$PWD/android/app/keystore.jks"
+            # Fail fast with a clear message if the keystore didn't decode.
+            if ! keytool -list -keystore "$PWD/android/app/keystore.jks" \
+                 -storepass "$KEYSTORE_PASSWORD" >/dev/null 2>&1; then
+              echo "::error::KEYSTORE_BASE64 did not decode into a valid keystore, or KEYSTORE_PASSWORD is wrong. Re-copy the full contents of anchorly-release.jks.b64 and check the password."
+              exit 1
+            fi
             cat > "$PWD/android/key.properties" <<EOF
           storeFile=$PWD/android/app/keystore.jks
           storePassword=$KEYSTORE_PASSWORD
