@@ -60,13 +60,21 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
-            # Strip any whitespace/newlines/CR the pasted secret may carry —
-            # GNU base64 -d errors ("invalid input") on characters like \r.
-            printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > "$PWD/android/app/keystore.jks"
+            # The pasted secret may carry whitespace/newlines/CR or a stray
+            # invisible character (e.g. a BOM). Strip whitespace, then print
+            # SAFE diagnostics (counts only — never the secret) so paste issues
+            # are obvious, and use --ignore-garbage to recover from stray chars.
+            clean="$(printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]')"
+            total="$(printf '%s' "$clean" | wc -c)"
+            bad="$(printf '%s' "$clean" | tr -d 'A-Za-z0-9+/=' | wc -c)"
+            echo "KEYSTORE_BASE64: ${total} base64 chars after whitespace strip (expected ~2984), ${bad} non-base64 chars found."
+            printf '%s' "$clean" | base64 --decode --ignore-garbage > "$PWD/android/app/keystore.jks" || true
+            size="$(wc -c < "$PWD/android/app/keystore.jks")"
+            echo "Decoded keystore size: ${size} bytes (expected ~2236)."
             # Fail fast with a clear message if the keystore didn't decode.
             if ! keytool -list -keystore "$PWD/android/app/keystore.jks" \
                  -storepass "$KEYSTORE_PASSWORD" >/dev/null 2>&1; then
-              echo "::error::KEYSTORE_BASE64 did not decode into a valid keystore, or KEYSTORE_PASSWORD is wrong. Re-copy the full contents of anchorly-release.jks.b64 and check the password."
+              echo "::error::Keystore did not open. ${bad} invalid char(s) in KEYSTORE_BASE64, decoded size ${size}B. If bad>0 or total is far from 2984, re-copy the FULL contents of anchorly-release.jks.b64. If those look right, KEYSTORE_PASSWORD is wrong."
               exit 1
             fi
             cat > "$PWD/android/key.properties" <<EOF
