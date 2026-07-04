@@ -43,6 +43,11 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   // uncramped. Formatting while typing would be impossible if we auto-hid it on
   // keyboard open, so instead we give a toggle in the app bar.
   bool _showToolbar = true;
+  // Base direction of the editor body. Quill defaults every paragraph to LTR,
+  // so Arabic would start on the left. We detect the body's dominant script and
+  // wrap the editor in a Directionality so Arabic lays out RTL (starts on the
+  // right) while English stays LTR — mirroring how the title field behaves.
+  TextDirection _bodyDir = TextDirection.ltr;
 
   @override
   void initState() {
@@ -76,6 +81,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
 
     setState(() {
       _quill = quill;
+      _bodyDir = directionOf(doc.toPlainText());
       _loading = false;
     });
   }
@@ -84,6 +90,18 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   void _onChanged() {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), _save);
+    _updateBodyDirection();
+  }
+
+  /// Flip the editor's base direction only when the dominant script changes,
+  /// so continuous typing in one language never rebuilds/​jumps the cursor.
+  void _updateBodyDirection() {
+    final quill = _quill;
+    if (quill == null) return;
+    final dir = directionOf(quill.document.toPlainText());
+    if (dir != _bodyDir) {
+      setState(() => _bodyDir = dir);
+    }
   }
 
   bool get _isEmpty {
@@ -177,13 +195,18 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                 ),
                 const Divider(height: 1),
                 Expanded(
-                  child: QuillEditor.basic(
-                    controller: quill,
-                    focusNode: _editorFocus,
-                    config: const QuillEditorConfig(
-                      padding: EdgeInsets.all(Spacing.md),
-                      placeholder: 'Write…',
-                      autoFocus: false,
+                  // Directionality makes the Quill body lay out RTL for Arabic
+                  // (so it starts on the right) and LTR for English.
+                  child: Directionality(
+                    textDirection: _bodyDir,
+                    child: QuillEditor.basic(
+                      controller: quill,
+                      focusNode: _editorFocus,
+                      config: const QuillEditorConfig(
+                        padding: EdgeInsets.all(Spacing.md),
+                        placeholder: 'Write…',
+                        autoFocus: false,
+                      ),
                     ),
                   ),
                 ),
