@@ -8,6 +8,8 @@
 //   Notes      : id, title, contentJson (Quill delta), createdAt, updatedAt
 //   Habits     : id, name, createdAt
 //   DayEntries : id, habitId (FK -> Habits.id), date, state, note
+//   CheckIns   : id, createdAt, emotionsJson, note, urge{Intensity,Outcome},
+//                urgeNote, coping  (a timestamped self check-in)
 //
 // One-to-many: one Habit has many DayEntries, linked by DayEntries.habitId.
 // Deleting a Habit cascades and removes all of its DayEntries (see the FK).
@@ -29,6 +31,9 @@ part 'database.g.dart';
 /// The three states a Journal day can hold.
 /// Stored as an integer in SQLite via drift's `intEnum`.
 enum DayState { neutral, success, relapse }
+
+/// What happened with an urge, when one is logged on a check-in.
+enum UrgeOutcome { resisted, partly, gaveIn }
 
 // ---------------------------------------------------------------------------
 // Tables
@@ -76,13 +81,28 @@ class DayEntries extends Table {
       ];
 }
 
+class CheckIns extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  // The moment being recorded (defaults to now, but editable).
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  // Selected emotions as a JSON list of strings, e.g. ["Anxious","Tired"].
+  TextColumn get emotionsJson => text().withDefault(const Constant('[]'))();
+  // Optional free note ("what happened / anything to note").
+  TextColumn get note => text().withDefault(const Constant(''))();
+  // Optional urge section. A urge is "present" when urgeIntensity is non-null.
+  IntColumn get urgeIntensity => integer().nullable()(); // 0..10
+  IntColumn get urgeOutcome => intEnum<UrgeOutcome>().nullable()();
+  TextColumn get urgeNote => text().withDefault(const Constant(''))(); // what the urge was
+  TextColumn get coping => text().withDefault(const Constant(''))(); // what helped / will try
+}
+
 // ---------------------------------------------------------------------------
 // Database
 // ---------------------------------------------------------------------------
 
 @DriftDatabase(
-  tables: [TodoItems, Notes, Habits, DayEntries],
-  daos: [TodoDao, NotesDao, JournalDao],
+  tables: [TodoItems, Notes, Habits, DayEntries, CheckIns],
+  daos: [TodoDao, NotesDao, JournalDao, CheckInDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -90,18 +110,25 @@ class AppDatabase extends _$AppDatabase {
   // Test/alternate constructor allowing an injected executor.
   AppDatabase.forTesting(super.executor);
 
+  // v1: Todo/Notes/Journal.  v2: added the CheckIns table.
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+        // Fresh installs get every current table.
         onCreate: (m) => m.createAll(),
+        // Existing installs evolve without losing data. Each `if (from < N)`
+        // block runs once, in order, to bring an old database up to date.
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(checkIns);
+          }
+        },
         beforeOpen: (details) async {
           // Enforce foreign keys so the cascade delete above actually runs.
           await customStatement('PRAGMA foreign_keys = ON');
         },
-        // Future schema changes go here as `onUpgrade` steps when schemaVersion
-        // is bumped — this is what preserves data across app updates.
       );
 }
 
@@ -270,5 +297,54 @@ class JournalDao extends DatabaseAccessor<AppDatabase> with _$JournalDaoMixin {
         DayEntriesCompanion(state: Value(state), note: Value(note)),
       );
     }
+  }
+}
+
+@DriftAccessor(tables: [CheckIns])
+class CheckInDao extends DatabaseAccessor<AppDatabase> with _$CheckInDaoMixin {
+  CheckInDao(super.db);
+
+  /// All check-ins recorded on [day], newest first.
+  Stream<List<CheckIn>> watchForDay(DateTime day) {
+    final start = DateTime(day.year, day.month, day.day);
+    final end = start.add(const Duration(days: 1));
+    return (select(checkIns)
+          ..where((c) =>
+              c.createdAt.isBiggerOrEqualValue(start) &
+              c.createdAt.isSmallerThanValue(end))
+          ..orderBy([(c) => OrderingTerm.desc(c.createdAt)]))
+        .watch();
+  }
+
+  /// Insert (id == null) or update a check-in. Takes plain values so the UI
+  /// never has to touch drift types. Emotions arrive already JSON-encoded.
+  Future<void> saveEntry({
+    int? id,
+    required DateTime createdAt,
+    required String emotionsJson,
+    required String note,
+    int? urgeIntensity,
+    UrgeOutcome? urgeOutcome,
+    required String urgeNote,
+    required String coping,
+  }) async {
+    final companion = CheckInsCompanion(
+      createdAt: Value(createdAt),
+      emotionsJson: Value(emotionsJson),
+      note: Value(note),
+      urgeIntensity: Value(urgeIntensity),
+      urgeOutcome: Value(urgeOutcome),
+      urgeNote: Value(urgeNote),
+      coping: Value(coping),
+    );
+    if (id == null) {
+      await into(checkIns).insert(companion);
+    } else {
+      await (update(checkIns)..where((c) => c.id.equals(id))).write(companion);
+    }
+  }
+
+  Future<void> deleteEntry(int id) {
+    return (delete(checkIns)..where((c) => c.id.equals(id))).go();
   }
 }

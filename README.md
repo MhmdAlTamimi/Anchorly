@@ -3,12 +3,14 @@
 A calm, private place for the small work of a life — what you mean to do, what
 you want to remember, who you're trying to become. **Offline and yours.**
 
-Anchorly is a single Android app bundling three independent tools under one
+Anchorly is a single Android app bundling four independent tools under one
 consistent design:
 
 - **Todo** — a to-do list that tidies itself up each new day.
 - **Notes** — rich-text notes with proper Arabic (RTL) + English (LTR) support.
 - **Journal** — a habit tracker with a monthly calendar per habit.
+- **Check-in** — quick timestamped records of how you feel (emotion chips), with
+  an optional note and an optional urge log; grouped by day.
 
 Everything is stored **locally** on the phone (SQLite). No accounts, no cloud,
 no network. Built with Flutter and delivered as a downloadable APK built
@@ -53,6 +55,7 @@ lib/
     todo/    todo_page.dart
     notes/   notes_page.dart, note_editor_page.dart
     journal/ journal_page.dart, habit_calendar_page.dart
+    checkin/ checkin_page.dart, checkin_editor.dart
 ci/
   app_build.gradle          # signing-aware Android build config (see below)
 .github/workflows/build.yml # the APK build pipeline

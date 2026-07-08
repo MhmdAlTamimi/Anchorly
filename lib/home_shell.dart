@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 
 import 'core/database/db.dart';
+import 'features/checkin/checkin_page.dart';
 import 'features/journal/journal_page.dart';
 import 'features/notes/notes_page.dart';
 import 'features/todo/todo_page.dart';
@@ -25,6 +26,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     TodoPage(),
     NotesPage(),
     JournalPage(),
+    CheckinPage(),
   ];
 
   static const _destinations = [
@@ -39,6 +41,10 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     NavigationDestination(
       icon: Icon(Icons.calendar_month_rounded),
       label: 'Journal',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.self_improvement_rounded),
+      label: 'Check-in',
     ),
   ];
 
