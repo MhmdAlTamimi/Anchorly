@@ -1,0 +1,57 @@
+name: anchorly
+description: "Anchorly — a calm, private, offline personal productivity app (Todo · Notes · Journal)."
+publish_to: "none"
+
+# versionName (1.0.0) is the human-readable version shown to users.
+# versionCode (the "+1" build number) is the internal integer Android uses to
+# decide whether an install is an update. CI overrides the build number with the
+# GitHub run number so it always increases — see .github/workflows/build.yml.
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Global Material/Cupertino/Widgets localizations (needed for RTL + the
+  # flutter_quill editor's own localized strings).
+  flutter_localizations:
+    sdk: flutter
+
+  # Material 3 icons/adaptive UI come from the SDK; no extra package needed.
+  cupertino_icons: ^1.0.8
+
+  # Local, type-safe SQLite database with built-in schema migrations.
+  # drift = the API; sqlite3_flutter_libs = the bundled native SQLite engine;
+  # path_provider = finds the app's private storage folder for the .sqlite file.
+  drift: ^2.21.0
+  sqlite3_flutter_libs: ^0.5.24
+  path_provider: ^2.1.4
+  path: ^1.9.0
+
+  # Rich-text editor for Notes. Stores content as a structured "delta" (JSON),
+  # not plain text — that is why Note.contentJson is a String of JSON.
+  # Pinned to 11.4.2: works with Flutter 3.27 (Dart 3.6) and uses the fixed
+  # federated quill_native_bridge ^11 (older 10.x pulled a broken windows impl).
+  flutter_quill: 11.4.2
+
+  # Monthly calendar widget used by the Journal habit tracker.
+  table_calendar: ^3.1.2
+
+  # Bidi helper for detecting Arabic (RTL) vs English (LTR) text direction.
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Code generation for drift (produces the *.g.dart database code in CI).
+  build_runner: ^2.4.13
+  drift_dev: ^2.21.0
+
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
