@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Undated planner templates for the reMarkable Paper Pro.
 
-Three reusable pages (Month, time-block Week, Deadline tracker) and a Start
-page, written as single-page PDFs, a multi-month pack and native-size PNGs.
+A four-page reusable pack (Cover, Month, time-block Week, Deadline tracker):
+clear the Week page each week and the Month page each month. Each page is also
+written as its own PDF and as a native-size PNG.
 
-    python3 build.py                                  # defaults below
-    python3 build.py --months 12                      # a bigger pack
-    python3 build.py --start-hour 6 --end-hour 24 --week-start mon
+    python3 build.py
+    python3 build.py --title "Term Planner" --start-hour 6 --end-hour 24 --week-start mon
 
 Needs reportlab (pip install reportlab). PNGs also need pdftoppm (poppler).
 """
@@ -18,7 +18,6 @@ from pathlib import Path
 
 from reportlab.lib.colors import HexColor
 from reportlab.lib.units import mm
-from reportlab.lib.utils import simpleSplit
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
@@ -56,7 +55,6 @@ WEEKEND_FILL = HexColor("#e2e2e2")
 
 DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 WEEKEND = {"Sat", "Sun"}
-WEEKS_PER_MONTH = 5  # enough Week pages for any month
 
 FONT_FILES = {
     "regular": ("Inter-Regular", "Helvetica"),
@@ -130,13 +128,6 @@ def text(c, x, y, s, size=8, font="regular", color=TEXT, align="left", spacing=0
 def label(c, x, y, s, size=6.5, color=MUTED, align="left"):
     """Small letterspaced caps: the voice of every printed label."""
     return text(c, x, y, s.upper(), size, "bold", color, align, spacing=0.8)
-
-
-def paragraph(c, x, y, s, width, size=7.5, leading=10, color=TEXT):
-    for line in simpleSplit(s, F["regular"], size, width):
-        text(c, x, y, line, size, color=color)
-        y += leading
-    return y
 
 
 def checkbox(c, x, y, size=3.6 * mm):
@@ -328,119 +319,18 @@ def draw_deadlines(c):
         vline(c, x, y, CONTENT_BOTTOM, color=FAINT, width=0.5)
 
 
-STEPS = [
-    ("Capture", "Heard about a deadline? Write it on the Deadlines page right away. "
-                "Don't plan it yet, just get it out of your head."),
-    ("Map the month", "Copy the big dates onto the Month page. Crowded weeks become "
-                      "obvious before they arrive."),
-    ("Block the week", "Each week, copy what's due into the DUE strip, then block "
-                       "sessions for each subject in the hour grid."),
-    ("Follow through", "Tick blocks as you finish them. Tick Done in the tracker when "
-                       "it's handed in."),
-]
-
-RESET = [
-    "Empty your head: every new deadline goes onto the Deadlines page",
-    "Copy this week's due dates into the DUE strip on the Week page",
-    "Mark the fixed things first: classes, shifts, meetings",
-    "Block study and work sessions; put the hardest subject in your best hours",
-    "Leave one or two empty blocks as buffer, then tick Planned in the tracker",
-]
-
-
-def draw_start(c, days):
-    text(c, LEFT, MARGIN_TOP + 13 * mm, "Planner", 30, "display", INK)
+def draw_cover(c, title, days):
+    """Minimal cover: a stacked title, a short rule and what's inside."""
+    size = 54
+    y = PAGE_H * 0.36
+    for word in title.split():
+        text(c, LEFT, y, word, size, "display", INK)
+        y += size * 1.02
+    y -= size * 0.45
+    hline(c, LEFT, LEFT + 22 * mm, y, color=INK, width=2)
+    label(c, LEFT, y + 9 * mm, "Month  ·  Week  ·  Deadlines", size=8, color=TEXT)
     first = "Monday" if days[0] == "Mon" else "Sunday"
-    text(c, LEFT, MARGIN_TOP + 20 * mm,
-         f"Undated  ·  weeks start {first}  ·  made for reMarkable Paper Pro", 8.5, color=MUTED)
-    hline(c, LEFT, RIGHT, MARGIN_TOP + 25 * mm, color=INK, width=0.9)
-
-    # How it flows: four steps in a row.
-    y = MARGIN_TOP + 34 * mm
-    label(c, LEFT, y, "How it flows", color=TEXT)
-    gap = 4 * mm
-    cw = (CONTENT_W - 3 * gap) / 4
-    for i, (title, body) in enumerate(STEPS):
-        x = LEFT + i * (cw + gap)
-        hline(c, x, x + cw, y + 3 * mm, color=TEXT, width=0.6)
-        text(c, x, y + 12 * mm, str(i + 1), 20, "display", MUTED)
-        text(c, x, y + 18 * mm, title, 9.5, "bold", INK)
-        for n, line in enumerate(simpleSplit(body, F["regular"], 7.5, cw)):
-            text(c, x, y + 23 * mm + n * 3.6 * mm, line, 7.5)
-
-    # Subject key (left) and a worked example of the Week grid (right).
-    y = MARGIN_TOP + 82 * mm
-    lw = CONTENT_W * 0.52
-    rx, rw = LEFT + lw + 8 * mm, CONTENT_W - lw - 8 * mm
-    top = panel_title(c, LEFT, y, lw, "Subject key")
-    code_w, hrs_w = 13 * mm, 15 * mm
-    for name, x in [("Code", LEFT), ("Subject / project", LEFT + code_w),
-                    ("Hrs / wk", LEFT + lw - hrs_w)]:
-        label(c, x + 1.5 * mm, top + 3.6 * mm, name, size=5.5)
-    ys = write_lines(c, LEFT, top, lw, top + 8 * 8 * mm, pitch=8 * mm)
-    vline(c, LEFT + code_w, top, ys[-1], color=FAINT, width=0.5)
-    vline(c, LEFT + lw - hrs_w, top, ys[-1], color=FAINT, width=0.5)
-    paragraph(c, LEFT, ys[-1] + 5 * mm,
-              "Give each subject or project a 1–2 letter code. Blocks on the Week page "
-              "are narrow, so the code is all you need to write.", lw, size=7, color=MUTED)
-
-    top = panel_title(c, rx, y, rw, "Drawing a block")
-    week_example(c, rx, top + 3 * mm, rw, days)
-
-    # Weekly reset checklist.
-    y = MARGIN_TOP + 170 * mm
-    top = panel_title(c, LEFT, y, CONTENT_W, "Weekly reset  ·  10 minutes, same day each week")
-    for n, item in enumerate(RESET):
-        ly = top + (n + 1) * ROW
-        text(c, LEFT, ly - 1.8 * mm, str(n + 1), 8.5, "bold", MUTED)
-        text(c, LEFT + 6 * mm, ly - 1.8 * mm, item, 8.5)
-        hline(c, LEFT, RIGHT, ly, color=FAINT, width=0.5)
-
-    text(c, LEFT, CONTENT_BOTTOM - 1 * mm,
-         "Each month in this pack: Month  ·  Deadlines  ·  5 × Week. "
-         "Nothing is pre-dated: write dates in the boxes.", 7, color=MUTED)
-
-
-def week_example(c, x, y, w, days):
-    """A tiny, filled-in slice of the Week page, showing how blocks look."""
-    gut, hdr, due, rh, cols = 7 * mm, 5.5 * mm, 8 * mm, 7 * mm, 3
-    cw = (w - gut) / cols
-    gx = x + gut
-    names = days[1:4]
-    for i, d in enumerate(names):
-        rect(c, gx + i * cw, y, cw, hdr, fill=FILL)
-        label(c, gx + i * cw + 1.5 * mm, y + hdr / 2 + 1 * mm, d, size=6, color=INK)
-    gy = y + hdr
-    rect(c, gx, gy, w - gut, due, fill=HexColor("#f6f6f6"))
-    label(c, gx - 1.2 * mm, gy + due / 2 + 1 * mm, "Due", size=5.5, color=INK, align="right")
-    gy += due
-    hline(c, x, x + w, gy, color=TEXT, width=0.8)
-    for r in range(5):
-        ry = gy + r * rh
-        if r:
-            hline(c, x, x + w, ry, color=LINE, width=0.5)
-        hline(c, gx, x + w, ry + rh / 2, color=FAINT, width=0.5, dash=[0.5, 1.5])
-        text(c, gx - 1.2 * mm, ry + 2.6 * mm, f"{9 + r:02d}", 6, color=MUTED, align="right")
-    bottom = gy + 5 * rh
-    hline(c, x, x + w, bottom, color=TEXT, width=0.8)
-    for i in range(cols + 1):
-        vline(c, gx + i * cw, y, bottom, color=LINE, width=0.6)
-
-    pad = 0.8 * mm
-    # A planned 2-hour block, a finished one (shaded + ticked), and a deadline.
-    rect(c, gx + pad, gy + rh + pad, cw - 2 * pad, 2 * rh - 2 * pad,
-         radius=1 * mm, color=INK, width=1)
-    text(c, gx + 2 * mm, gy + rh + 4.6 * mm, "M", 8, "bold", INK)
-    text(c, gx + 2 * mm, gy + rh + 8.4 * mm, "Ch. 4", 7, color=INK)
-    rect(c, gx + cw + pad, gy + pad, cw - 2 * pad, rh * 1.5 - 2 * pad,
-         fill=WEEKEND_FILL, radius=1 * mm, color=INK, width=1)
-    text(c, gx + cw + 2 * mm, gy + 4.6 * mm, "P  lab ✓", 7.5, "bold", INK)
-    text(c, gx + 2 * cw + 2 * mm, y + hdr + 5.2 * mm, "Essay!", 7.5, "bold", INK)
-
-    notes = ["Box = planned session (code + what)", "Shaded + ✓ = done",
-             "Due strip = hand-in that day"]
-    for n, s in enumerate(notes):
-        text(c, x, bottom + 5 * mm + n * 3.8 * mm, s, 7, color=MUTED)
+    label(c, LEFT, CONTENT_BOTTOM - 2 * mm, f"Undated  ·  weeks start {first}")
 
 
 # --- output -----------------------------------------------------------------
@@ -457,7 +347,6 @@ def build(args):
     register_fonts()
     days = DAYS if args.week_start == "sun" else DAYS[1:] + DAYS[:1]
     pages = {
-        "start-here": ("Start here", lambda c: draw_start(c, days)),
         "month": ("Month", lambda c: draw_month(c, days)),
         "week": ("Week", lambda c: draw_week(c, days, args.start_hour, args.end_hour)),
         "deadlines": ("Deadlines", draw_deadlines),
@@ -466,28 +355,20 @@ def build(args):
     out = Path(args.out)
     (out / "pages").mkdir(parents=True, exist_ok=True)
     for key, (title, draw) in pages.items():
-        c = new_canvas(out / "pages" / f"{key}.pdf", f"Planner – {title}")
+        c = new_canvas(out / "pages" / f"{key}.pdf", f"{args.title} – {title}")
         draw(c)
         c.save()
 
-    # The pack: Start, then Month / Deadlines / 5 Weeks for each month, with a
-    # PDF outline (table of contents) so you can jump to "Month 2" etc.
-    pack = out / f"planner-pack-{args.months}-months.pdf"
-    c = new_canvas(pack, "Planner")
-
-    def page(key, title, level=0):
-        name = f"p{c.getPageNumber()}"
-        c.bookmarkPage(name)
-        c.addOutlineEntry(title, name, level=level)
-        pages[key][1](c)
+    # The pack holds one of each page and is reused: clear the Week page each
+    # week and the Month page each month; Deadlines carries what's still ahead.
+    pack = out / f"{args.title.lower().replace(' ', '-')}.pdf"
+    c = new_canvas(pack, args.title)
+    cover = ("Cover", lambda c: draw_cover(c, args.title, days))
+    for title, draw in [cover, *pages.values()]:
+        c.bookmarkPage(title)
+        c.addOutlineEntry(title, title)
+        draw(c)
         c.showPage()
-
-    page("start-here", "Start here")
-    for m in range(1, args.months + 1):
-        page("month", f"Month {m}")
-        page("deadlines", "Deadlines", level=1)
-        for w in range(1, WEEKS_PER_MONTH + 1):
-            page("week", f"Week {w}", level=1)
     c.save()
 
     if shutil.which("pdftoppm"):
@@ -509,7 +390,7 @@ def build(args):
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    p.add_argument("--months", type=int, default=3, help="months in the pack (default 3)")
+    p.add_argument("--title", default="Monthly Calendar", help="title on the cover")
     p.add_argument("--start-hour", type=int, default=7, help="first hour on the Week grid")
     p.add_argument("--end-hour", type=int, default=23, help="hour the Week grid ends at")
     p.add_argument("--week-start", choices=["sun", "mon"], default="sun")

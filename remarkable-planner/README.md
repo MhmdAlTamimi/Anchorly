@@ -1,17 +1,26 @@
 # reMarkable Paper Pro planner
 
-An undated, grayscale planner built around one workflow: **capture deadlines → map the month → block study/work time in the week → tick it off.**
+An undated, grayscale, **reusable** 4-page planner. You don't flip forward to new pages; you clear and reuse the same ones:
 
-| Page | What it's for |
-|---|---|
-| **Start here** | How the pages fit together, a subject key (1–2 letter codes for X, Y…), and a 5-step weekly reset |
-| **Month** | 6×7 grid (Sunday first) with a box in each cell for the date, a week-number column, key deadlines and goals |
-| **Deadlines** | The inbox: every deadline goes here the moment you hear about it. Columns: Done, Due, Deadline, Subject, Priority, Estimated hours, Planned |
-| **Week** | The main planning view: a DUE strip for hand-ins, then a 07:00–23:00 hour grid (dotted half hours) to block sessions into, plus this week's deadlines and focus |
+| Page | What it's for | Clear it… |
+|---|---|---|
+| **Cover** | Minimal title page ("Monthly Calendar") | never |
+| **Month** | 6×7 grid (Sunday first) with a box in each cell for the date, a week-number column, key deadlines and goals | at the start of each month |
+| **Week** | The main planning view: a DUE strip for hand-ins, then a 07:00–23:00 hour grid (dotted half hours) to block study/work sessions into, plus this week's deadlines and focus | at the start of each week |
+| **Deadlines** | The inbox: every deadline goes here the moment you hear about it. Columns: Done, Due, Deadline, Subject, Priority, Estimated hours, Planned | when it fills up (cross off done rows) |
+
+The Deadlines page is what makes clearing safe. Anything that isn't finished or isn't due yet lives there, so clearing the Week page loses nothing.
+
+## Weekly reset
+
+1. Copy anything unfinished on the Week page into **Deadlines**.
+2. Clear the Week page (on the tablet: the eraser's clear-page option).
+3. Copy this week's due dates from Deadlines into the **DUE** strip.
+4. Block sessions in the hour grid, then tick **Planned** in the tracker.
 
 ## Files
 
-- `output/planner-pack-3-months.pdf` has the Start page, then **Month → Deadlines → 5 × Week** for each of 3 months (22 pages). It also has a PDF table of contents ("Month 2 › Week 3").
+- `output/monthly-calendar.pdf` is the 4-page pack to put on the tablet.
 - `output/pages/*.pdf` holds each page on its own.
 - `output/png/*.png` holds the same pages at the Paper Pro's native 1620×2160, 8-bit grayscale, for custom-template tools.
 
@@ -23,9 +32,8 @@ Drag the PDF into the reMarkable desktop app, upload it at my.remarkable.com, or
 
 ```sh
 pip install reportlab          # pillow is optional, for grayscale PNGs
-python3 build.py               # defaults: 3 months, 07–23, Sunday start
-python3 build.py --months 6 --start-hour 6 --end-hour 24
-python3 build.py --week-start mon
+python3 build.py               # defaults: "Monthly Calendar", 07–23, Sunday start
+python3 build.py --title "Term Planner" --start-hour 6 --end-hour 24 --week-start mon
 ```
 
 PNGs need `pdftoppm` (poppler). Layout constants (margins, row heights, grays) are at the top of `build.py`.
