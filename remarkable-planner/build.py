@@ -189,7 +189,9 @@ def day_dividers(c, y1, y2):
 def draw_week(c, days, start_hour, end_hour):
     """The main planning view: an hour grid to block study/work sessions into."""
     header(c, "Week", [("From", 24 * mm), ("To", 24 * mm), ("Wk", 9 * mm)])
-    hdr_h, due_h, panel_h = 7.5 * mm, 11 * mm, 44 * mm
+    hdr_h, due_h, gap = 7 * mm, 11 * mm, 4 * mm
+    panel_rows, panel_pitch = 4, 6.5 * mm  # kept short so a full day fits the grid
+    panel_h = 4.6 * mm + panel_rows * panel_pitch
     gx = LEFT + GUTTER
 
     y = CONTENT_TOP
@@ -202,33 +204,34 @@ def draw_week(c, days, start_hour, end_hour):
     grid_top = y + due_h
     hline(c, LEFT, RIGHT, grid_top, color=TEXT, width=0.8)
 
-    grid_bottom = CONTENT_BOTTOM - panel_h - 5 * mm
+    grid_bottom = CONTENT_BOTTOM - panel_h - gap
     hours = end_hour - start_hour
     row = (grid_bottom - grid_top) / hours
     for i in range(hours):
         ry = grid_top + i * row
-        if i:
-            hline(c, LEFT, RIGHT, ry, color=LINE, width=0.5)
+        hour = (start_hour + i) % 24
+        if i:  # noon is drawn darker so you can find midday at a glance
+            hline(c, LEFT, RIGHT, ry, color=TEXT if hour == 12 else LINE,
+                  width=0.7 if hour == 12 else 0.5)
         hline(c, gx, RIGHT, ry + row / 2, color=FAINT, width=0.5, dash=[0.5, 1.5])
-        text(c, gx - 1.5 * mm, ry + 3 * mm, f"{(start_hour + i) % 24:02d}",
-             7, "regular", MUTED, "right")
+        text(c, gx - 1.5 * mm, ry + 2.7 * mm, f"{hour:02d}", 6.5, "regular", MUTED, "right")
     hline(c, LEFT, RIGHT, grid_bottom, color=TEXT, width=0.8)
     day_dividers(c, CONTENT_TOP, grid_bottom)
     vline(c, LEFT, CONTENT_TOP, grid_bottom, color=LINE, width=0.6)
 
     # Bottom: this week's deadlines (left) and focus (right).
-    y = grid_bottom + 5 * mm
+    y = grid_bottom + gap
     lw = CONTENT_W * 0.6
     rx, rw = LEFT + lw + 6 * mm, CONTENT_W - lw - 6 * mm
     due_col = 16 * mm
     top = panel_title(c, LEFT, y, lw, "Deadlines this week", note="Due")
-    ys = write_lines(c, LEFT, top, lw, CONTENT_BOTTOM)
+    ys = write_lines(c, LEFT, top, lw, CONTENT_BOTTOM, pitch=panel_pitch)
     for ly in ys:
-        checkbox(c, LEFT, ly - 4.6 * mm)
+        checkbox(c, LEFT, ly - 5 * mm)
     vline(c, LEFT + lw - due_col, top, ys[-1], color=FAINT, width=0.5)
 
     top = panel_title(c, rx, y, rw, "Focus")
-    for n, ly in enumerate(write_lines(c, rx, top, rw, CONTENT_BOTTOM), 1):
+    for n, ly in enumerate(write_lines(c, rx, top, rw, CONTENT_BOTTOM, pitch=panel_pitch), 1):
         if n <= 3:
             text(c, rx, ly - 1.3 * mm, str(n), 8, "bold", MUTED)
 
@@ -391,8 +394,8 @@ def build(args):
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--title", default="Monthly Calendar", help="title on the cover")
-    p.add_argument("--start-hour", type=int, default=7, help="first hour on the Week grid")
-    p.add_argument("--end-hour", type=int, default=23, help="hour the Week grid ends at")
+    p.add_argument("--start-hour", type=int, default=0, help="first hour on the Week grid")
+    p.add_argument("--end-hour", type=int, default=24, help="hour the Week grid ends at")
     p.add_argument("--week-start", choices=["sun", "mon"], default="sun")
     p.add_argument("--out", default=str(HERE / "output"))
     build(p.parse_args())

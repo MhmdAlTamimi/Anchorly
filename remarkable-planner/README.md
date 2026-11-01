@@ -6,7 +6,7 @@ An undated, grayscale, **reusable** 4-page planner. You don't flip forward to ne
 |---|---|---|
 | **Cover** | Minimal title page ("Monthly Calendar") | never |
 | **Month** | 6×7 grid (Sunday first) with a box in each cell for the date, a week-number column, key deadlines and goals | at the start of each month |
-| **Week** | The main planning view: a DUE strip for hand-ins, then a 07:00–23:00 hour grid (dotted half hours) to block study/work sessions into, plus this week's deadlines and focus | at the start of each week |
+| **Week** | The main planning view: a DUE strip for hand-ins, then a full-day 00:00–24:00 hour grid (dotted half hours, darker noon line) to block study/work sessions into, plus this week's deadlines and focus | at the start of each week |
 | **Deadlines** | The inbox: every deadline goes here the moment you hear about it. Columns: Done, Due, Deadline, Subject, Priority, Estimated hours, Planned | when it fills up (cross off done rows) |
 
 The Deadlines page is what makes clearing safe. Anything that isn't finished or isn't due yet lives there, so clearing the Week page loses nothing.
@@ -32,7 +32,7 @@ Drag the PDF into the reMarkable desktop app, upload it at my.remarkable.com, or
 
 ```sh
 pip install reportlab          # pillow is optional, for grayscale PNGs
-python3 build.py               # defaults: "Monthly Calendar", 07–23, Sunday start
+python3 build.py               # defaults: "Monthly Calendar", 00–24, Sunday start
 python3 build.py --title "Term Planner" --start-hour 6 --end-hour 24 --week-start mon
 ```
 
